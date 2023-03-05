@@ -96,6 +96,50 @@ int getProcesses(process_info processes[1024], bool specific_process_chosen, int
     return count;
 }
 
+void outputTXT(process_info processes[1024], int count){
+
+    File *fp = fopen("compositeTable.txt", "r");
+    fprintf(fp, "%s\n", "         PID     FD      Filename                Inode");
+    fprintf(fp, "%s\n", "        ===============================================");
+
+    for (int i = 0; i < count; i++){
+        fprintf(fp, "%d        %d  %d        %s        %d\n", i, processes[i].PID, processes[i].FD, processes[i].file_name, processes[i].Inode);
+    }
+    fprintf("%s\n", "        ===============================================");
+    fclose(fp);
+
+}
+
+void outputBinary(process_info processes[1024], int count){
+
+    FILE *fp = fopen("compositeTable.bin", "wb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        exit(1);
+    }
+
+    // write header
+    char header[] = "         PID     FD      Filename                Inode\n"
+                    "        ===============================================\n";
+    fwrite(header, sizeof(header), 1, fp);
+
+    // write data
+    for (int i = 0; i < count; i++) {
+        fwrite(&i, sizeof(int), 1, fp);
+        fwrite(&processes[i].PID, sizeof(int), 1, fp);
+        fwrite(&processes[i].FD, sizeof(int), 1, fp);
+        fwrite(processes[i].file_name, sizeof(char), sizeof(processes[i].file_name), fp);
+        fwrite(&processes[i].Inode, sizeof(int), 1, fp);
+    }
+
+    // write footer
+    char footer[] = "        ===============================================\n";
+    fwrite(footer, sizeof(footer), 1, fp);
+
+    fclose(fp);
+    
+}
+
 void displayComposite(process_info processes[1024], int count){
 
     printf("%s\n", "         PID     FD      Filename                Inode");
