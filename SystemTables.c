@@ -35,15 +35,17 @@ void getFileDescriptors(process_info processes[1024], char path[1024], int* coun
                 // Reads the symbolic link of target file
                 char link[1024];
 
-                snprintf(path, 1024, "/proc/%d/fd/%d", pid, fd);
-                ssize_t link_len = readlink(path, link, sizeof(link) -1);
+                char fd_path[1024];
+
+                snprintf(fd_path, 1024, "/proc/%d/fd/%d", pid, fd);
+                ssize_t link_len = readlink(fd_path, link, sizeof(link) -1);
 
                 link[link_len] = '\0';
 
                 struct stat file_stat;
 
-                if (fstat(fd, &file_stat) == -1) {
-                    perror("fstat");
+                if (stat(fd_path, &file_stat) == -1) {
+                    perror("stat");
                     exit(EXIT_FAILURE);
                 }
 
@@ -96,8 +98,11 @@ int getProcesses(process_info processes[1024], bool specific_process_chosen, int
 
 void display(process_info processes[1024], int count){
 
+    printf("%4s %8s %30s %10s\n", "PID", "FD", "Filename", "Inode");
+    printf("%4s %8s %30s %10s\n", "===", "==", "========", "=====");
+    
     for (int i = 0; i < count; i++){
-        printf("%d     %d     %d      %s       %d\n", count, processes[i].PID, processes[i].FD, processes[i].file_name, processes[i].Inode);
+        printf("%d     %d     %d      %s       %d\n", i, processes[i].PID, processes[i].FD, processes[i].file_name, processes[i].Inode);
     }
 }
 
