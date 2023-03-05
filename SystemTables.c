@@ -3,9 +3,13 @@
 #include <string.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <stdbool.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
-typedef process_info {
+typedef struct process_info {
 
     pid_t PID;
     int FD;
@@ -14,60 +18,49 @@ typedef process_info {
 
 } process_info;
 
-void defineProcess(process_info *p, char path[]){
-
-    FILE *fp = fopen(path, "r");
-    if (fp != NULL) {
-        char buf[1024];
-
-        while (fgets(buf, sizeof(buf), fp) != NULL) {
-            if (strncmp(buf, "pos:", 4) == 0) {
-                long int pos = atol(buf + 4);
-                *p.PID = pid;
-                *p.FD = fd;
-                strncpy(*p.file_name, file_name, sizeof(*p.file_name));
-                *p.Inode = pos;
-                count++;
-                break;
-            }
-        }
-        fclose(fp);
-    }
-}
-
-void getFileDescriptors(process_info processes[MAX_PROCESSES], char path[], int* count, int pid){
+void getFileDescriptors(process_info processes[1024], char path[1024], int* count, int pid){
 
     DIR *dp2;
     struct dirent *ep2;
     dp2 = opendir(path);
+
+    if (dp2 != NULL){
     
-    while ((ep2 = readdir(dp2)) != NULL) {
+        while ((ep2 = readdir(dp2)) != NULL) {
+            if (ep2 -> d_type == DT_LNK) {
 
-        // Gets file descriptors for process
-        int fd = atoi(ep2 -> d_name);
+                // Gets file descriptors for process
+                int fd = atoi(ep2 -> d_name);
 
-        // Creates path to access information about file descriptors
-        snprintf(path, sizeof(path), "/proc/%d/fd/%d", pid, fd);
+                // Reads the symbolic link of target file
+                char link[1024];
 
-        // Reads the symbolic link of target file
-        char link[1024];
-        ssize_t link_len = readlink(path, link, sizeof(link) -1);
-        link[link_len] = '\0';
+                snprintf(path, 1024, "/proc/%d/fd/%d", pid, fd);
+                ssize_t link_len = readlink(path, link, sizeof(link) -1);
 
-        // Gets the name of the file by reading everything after the first slash
-        char *file_name = strrchr(link, '/');
-        file_name++;
+                link[link_len] = '\0';
 
-        // Creates path for file descriptor info
-        snprintf(path, sizeof(path), "/proc/%d/fdinfo/%d", pid, fd);
+                struct stat file_stat;
 
-        defineProcess(&processes[*count], path);
+                if (fstat(fd, &file_stat) == -1) {
+                    perror("fstat");
+                    exit(EXIT_FAILURE);
+                }
+
+                processes[*count].PID = pid;
+                processes[*count].FD = fd;
+                strncpy(processes[*count].file_name, link, 1024);
+                processes[*count].Inode = file_stat.st_ino;
+                (*count)++;
+
+            }
+        }
     }
 
     closedir(dp2);
 }
 
-void getProcesses(process_info processes[MAX_PROCESSES], bool specific_process_chosen, int process_chosen){
+int getProcesses(process_info processes[1024], bool specific_process_chosen, int process_chosen){
 
     //Populates the process array with all the current running processes
     int count = 0;
@@ -77,12 +70,23 @@ void getProcesses(process_info processes[MAX_PROCESSES], bool specific_process_c
     char path[1024];
     proc = opendir("/proc");
 
-    while ((ep = readdir(proc)) != NULL && count < MAX_PROCESSES) {
-        // Gets pid of process
-        pid_t pid = atoi(ep -> d_name);
-        // Create path to access file descriptors of process then calls function getFileDescrioptors to add the information to processes
-        snprintf(path, sizeof(path), "/proc/%d/fd", pid);
-        getFileDescriptors(processes, path, &count, pid);
+    if (specific_process_chosen){
+        getFileDescriptors(processes, path, &count, process_chosen);
+        return count;
+    }
+
+    while ((ep = readdir(proc)) != NULL && count < 1024) {
+        if (ep -> d_type == DT_DIR) {
+            // Gets pid of process
+            pid_t pid = atoi(ep -> d_name);
+            
+            if (pid <= 0){
+                continue;
+            }
+            // Create path to access file descriptors of process then calls function getFileDescrioptors to add the information to processes
+            snprintf(path, sizeof(path), "/proc/%d/fd", pid);
+            getFileDescriptors(processes, path, &count, pid);
+        }
     }
 
     closedir(proc);
@@ -90,16 +94,19 @@ void getProcesses(process_info processes[MAX_PROCESSES], bool specific_process_c
     return count;
 }
 
-void display(){
+void display(process_info processes[1024], int count){
 
+    for (int i = 0; i < count; i++){
+        printf("%d     %d     %d      %s       %d\n", count, processes[i].PID, processes[i].FD, processes[i].file_name, processes[i].Inode);
+    }
 }
 
 int main(int argc, char* argv[]){
 
-    process_info processes[MAX_PROCESSES];
+    process_info processes[1024];
 
     int threshold; int process_chosen;
-    bool per_process = false, systemWide = false, Vnodes = false, composite = false, specific_process_chosen = false;
+    bool selected = false, per_process = false, systemWide = false, Vnodes = false, composite = false, specific_process_chosen = false;
 
     for (int i = 1; i < argc; i++){
         if (strcmp(argv[i], "--per-process") == 0 && !selected){
@@ -129,6 +136,6 @@ int main(int argc, char* argv[]){
         }
     }
 
-    getProcesses(process, specific_process_chosen, process);
-    display();
+    int count = getProcesses(processes, specific_process_chosen, process_chosen);
+    display(processes, count);
 }
