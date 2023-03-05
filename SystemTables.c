@@ -14,7 +14,7 @@ typedef struct process_info {
     pid_t PID;
     int FD;
     char file_name[1024];
-    int Inode;
+    long Inode;
 
 } process_info;
 
@@ -103,12 +103,14 @@ int getProcesses(process_info processes[1024], bool specific_process_chosen, int
 
 void outputTXT(process_info processes[1024], int count){
 
-    FILE *fp = fopen("compositeTable.txt", "r");
+    printf("Printing to compositeTable.txt\n\n");
+
+    FILE *fp = fopen("compositeTable.txt", "w");
     fprintf(fp, "%s\n", "         PID     FD      Filename                Inode");
     fprintf(fp, "%s\n", "        ===============================================");
 
     for (int i = 0; i < count; i++){
-        fprintf(fp, "%d        %d  %d        %s        %d\n", i, processes[i].PID, processes[i].FD, processes[i].file_name, processes[i].Inode);
+        fprintf(fp, "%d\t%d  %d\t%s\t%ld\n", i, processes[i].PID, processes[i].FD, processes[i].file_name, processes[i].Inode);
     }
     fprintf(fp, "%s\n", "        ===============================================");
     fclose(fp);
@@ -117,6 +119,7 @@ void outputTXT(process_info processes[1024], int count){
 
 void outputBinary(process_info processes[1024], int count){
 
+    printf("Printing to compositeTable.bin\n\n");
     FILE *fp = fopen("compositeTable.bin", "wb");
     if (fp == NULL) {
         perror("Error opening file");
@@ -134,7 +137,7 @@ void outputBinary(process_info processes[1024], int count){
         fwrite(&processes[i].PID, sizeof(int), 1, fp);
         fwrite(&processes[i].FD, sizeof(int), 1, fp);
         fwrite(processes[i].file_name, sizeof(char), sizeof(processes[i].file_name), fp);
-        fwrite(&processes[i].Inode, sizeof(int), 1, fp);
+        fwrite(&processes[i].Inode, sizeof(long), 1, fp);
     }
 
     // write footer
@@ -151,7 +154,7 @@ void displayComposite(process_info processes[1024], int count){
     printf("%s\n", "        ===============================================");
 
     for (int i = 0; i < count; i++){
-        printf("%d        %d  %d        %s        %d\n", i, processes[i].PID, processes[i].FD, processes[i].file_name, processes[i].Inode);
+        printf("%d\t%d  %d\t%s\t%ld\n", i, processes[i].PID, processes[i].FD, processes[i].file_name, processes[i].Inode);
     }
     printf("%s\n\n", "        ===============================================");
 }
@@ -162,7 +165,7 @@ void displayVnodes(process_info processes[1024], int count){
     printf("%s\n", "        ===============================================");
 
     for (int i = 0; i < count; i++){
-        printf("%d        %d              %d\n", i, processes[i].FD, processes[i].Inode);
+        printf("%d\t%d\t%ld\n", i, processes[i].FD, processes[i].Inode);
     }
     printf("%s\n\n", "        ===============================================");
 }
@@ -173,7 +176,7 @@ void displaySystemWide(process_info processes[1024], int count){
     printf("%s\n", "        ===============================================");
 
     for (int i = 0; i < count; i++){
-        printf("%d        %d  %d        %s\n", i, processes[i].PID, processes[i].FD, processes[i].file_name);
+        printf("%d\t%d  %d\t%s\n", i, processes[i].PID, processes[i].FD, processes[i].file_name);
     }
     printf("%s\n\n", "        ===============================================");
 }
@@ -184,7 +187,7 @@ void displayPerProcess(process_info processes[1024], int count){
     printf("%s\n", "        ============");
 
     for (int i = 0; i < count; i++){
-        printf("%d        %d  %d\n", i, processes[i].PID, processes[i].FD);
+        printf("%d\t%d  %d\n", i, processes[i].PID, processes[i].FD);
     }
     printf("%s\n\n", "        ============");
 }
@@ -253,7 +256,7 @@ int main(int argc, char* argv[]){
         }
     }
 
-    if (specific_process_chosen && !selected){
+    if (!selected){
         composite = true;
     }
 
