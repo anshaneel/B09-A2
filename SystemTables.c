@@ -46,22 +46,22 @@ void getFileDescriptors(process_info processes[MAX_PROCESSES], char path[], int*
         // Gets file descriptors for process
         int fd = atoi(ep2 -> d_name);
 
-        // Creates path to access file descriptors
+        // Creates path to access information about file descriptors
         snprintf(path, sizeof(path), "/proc/%d/fd/%d", pid, fd);
 
+        // Reads the symbolic link of target file
         char link[1024];
         ssize_t link_len = readlink(path, link, sizeof(link) -1);
-
         link[link_len] = '\0';
 
+        // Gets the name of the file by reading everything after the first slash
         char *file_name = strrchr(link, '/');
-
         file_name++;
 
         // Creates path for file descriptor info
         snprintf(path, sizeof(path), "/proc/%d/fdinfo/%d", pid, fd);
 
-        defineProcess(&processes[count], path);
+        defineProcess(&processes[*count], path);
     }
 
     closedir(dp2);
@@ -88,7 +88,7 @@ void getProcesses(process_info processes[MAX_PROCESSES], bool specific_process_c
     closedir(proc);
 
     return count;
-    }
+}
 
 void display(){
 
