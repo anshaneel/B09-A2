@@ -96,14 +96,48 @@ int getProcesses(process_info processes[1024], bool specific_process_chosen, int
     return count;
 }
 
-void display(process_info processes[1024], int count){
+void displayComposite(process_info processes[1024], int count){
 
-    printf("%4s %8s %30s %10s\n", "PID", "FD", "Filename", "Inode");
-    printf("%4s %8s %30s %10s\n", "===", "==", "========", "=====");
-    
+    printf("%s\n", "         PID     FD      Filename                Inode");
+    printf("%s\n", "        ===============================================");
+
     for (int i = 0; i < count; i++){
-        printf("%d     %d     %d      %s       %d\n", i, processes[i].PID, processes[i].FD, processes[i].file_name, processes[i].Inode);
+        printf("%d        %d  %d        %s        %d\n", i, processes[i].PID, processes[i].FD, processes[i].file_name, processes[i].Inode);
     }
+    printf("%s\n", "        ===============================================");
+}
+
+void displayVnodes(process_info processes[1024], int count){
+
+    printf("%s\n", "           FD            Inode");
+    printf("%s\n", "        ===============================================");
+
+    for (int i = 0; i < count; i++){
+        printf("%d        %d              %d\n", i, processes[i].FD, processes[i].Inode);
+    }
+    printf("%s\n", "        ===============================================");
+}
+
+void displaySystemWide(process_info processes[1024], int count){
+
+    printf("%s\n", "         PID     FD      Filename");
+    printf("%s\n", "        ===============================================");
+
+    for (int i = 0; i < count; i++){
+        printf("%d        %d  %d        %s\n", i, processes[i].PID, processes[i].FD, processes[i].file_name);
+    }
+    printf("%s\n", "        ===============================================");
+}
+
+void displayPerProcess(process_info processes[1024], int count){
+
+    printf("%s\n", "         PID     FD ");
+    printf("%s\n", "        ============");
+
+    for (int i = 0; i < count; i++){
+        printf("%d        %d  %d\n", i, processes[i].PID, processes[i].FD);
+    }
+    printf("%s\n", "        ============");
 }
 
 int main(int argc, char* argv[]){
@@ -142,5 +176,5 @@ int main(int argc, char* argv[]){
     }
 
     int count = getProcesses(processes, specific_process_chosen, process_chosen);
-    display(processes, count);
+    displaySystemWide(processes, count);
 }
