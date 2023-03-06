@@ -21,7 +21,6 @@ typedef struct process_info {
 
 void getFileDescriptors(process_info processes[1024], char path[1024], int* count, int pid){
     /**
-
     * Retrieves information about the file descriptors associated with a process and stores it in an array of process_info structs.
     *@param processes: an array of process_info structs to store the file descriptor information
     *@param path: a string containing the path to the /proc directory
@@ -31,7 +30,6 @@ void getFileDescriptors(process_info processes[1024], char path[1024], int* coun
     *For each symbolic link found, the function extracts the file descriptor number and retrieves information about the target file using the stat function.
     *The function then stores the process ID, file descriptor number, file name, and inode number in a process_info struct and adds it to the processes array.
     *The count parameter is updated with the number of file descriptors found.
-
     */
 
     DIR *dp2;
@@ -80,7 +78,7 @@ void getFileDescriptors(process_info processes[1024], char path[1024], int* coun
     closedir(dp2);
 }
 
-int getProcesses(process_info processes[1024], bool specific_process_chosen, int process_chosen, int threshold){
+int getProcesses(process_info processes[1024], bool specific_process_chosen, int process_chosen){
     /**
     * Retrieves information about the file descriptors associated with a process and stores it in an array of process_info structs.
     *@param processes: an array of process_info structs to store the file descriptor information
@@ -113,9 +111,10 @@ int getProcesses(process_info processes[1024], bool specific_process_chosen, int
             // Gets pid of process
             pid_t pid = atoi(ep -> d_name);
             
-            if (pid <= threshold){
+            if (pid <= 0){
                 continue;
             }
+
             // Create path to access file descriptors of process then calls function getFileDescrioptors to add the information to processes
             snprintf(path, sizeof(path), "/proc/%d/fd", pid);
             getFileDescriptors(processes, path, &count, pid);
@@ -125,6 +124,27 @@ int getProcesses(process_info processes[1024], bool specific_process_chosen, int
     closedir(proc);
 
     return count;
+}
+
+void outputThreshold(process_info processes[1024], int count, int threshold){
+
+    printf("## Offending processes:\n\n");
+    int c = 0;
+    int pid = -1;
+
+    for (int i = 0; i < count; i++){
+        if (processes[i].PID == pid){
+            c++;
+        }
+        else {
+            if (c > threshold){
+                printf("%d (%d),", pid, c);
+            }
+            c = 1;
+            pid = processes[i].PID;
+        }
+    }
+
 }
 
 void outputTXT(process_info processes[1024], int count){
@@ -263,7 +283,7 @@ void displayPerProcess(process_info processes[1024], int count){
     printf("%s\n\n", "        ============");
 }
 
-void display(process_info processes[1024], int count, bool per_process, bool systemWide, bool Vnodes, bool composite, bool specific_process_chosen, bool txt, bool bin){
+void display(process_info processes[1024], int count, bool per_process, bool systemWide, bool Vnodes, bool composite, bool specific_process_chosen, bool txt, bool bin, int threshold){
     /**
     * Displays information about running processes based on user-selected options.
     *@param processes: an array of process_info structs containing file descriptor information for each process
@@ -301,6 +321,9 @@ void display(process_info processes[1024], int count, bool per_process, bool sys
     //If the bin option is selected, the function calls the outputBinary function to output file descriptor information to a binary file.
     if (bin){
         outputBinary(processes, count);
+    }
+    if (threshold){
+        outputThreshold(processes, count, threshold);
     }
 
 }
@@ -361,8 +384,8 @@ int main(int argc, char* argv[]){
     }
 
     // The function calls the getProcesses function, which populates the array of process_info structs with process information, and returns the number of processes found.
-    int count = getProcesses(processes, specific_process_chosen, process_chosen, threshold);
+    int count = getProcesses(processes, specific_process_chosen, process_chosen);
     // The function then calls the display function, which prints the process information based on the selected options.
-    display(processes , count, per_process, systemWide, Vnodes, composite, specific_process_chosen, txt, bin);
+    display(processes , count, per_process, systemWide, Vnodes, composite, specific_process_chosen, txt, bin, threshold);
 
 }
