@@ -78,6 +78,19 @@ void getFileDescriptors(process_info processes[1024], char path[1024], int* coun
     closedir(dp2);
 }
 
+int is_my_process(int pid) {
+
+    char path[1024];
+    sprintf(path, "/proc/%d/status", pid);
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        perror("stat");
+        return -1;
+    }
+    return st.st_uid == getuid();
+
+}
+
 int getProcesses(process_info processes[1024], bool specific_process_chosen, int process_chosen){
     /**
     * Retrieves information about the file descriptors associated with a process and stores it in an array of process_info structs.
@@ -107,11 +120,12 @@ int getProcesses(process_info processes[1024], bool specific_process_chosen, int
     }
 
     while ((ep = readdir(proc)) != NULL && count < 1024) {
-        if (ep -> d_type == DT_DIR) {
+        if (ep -> d_type == DT_DIR ) {
+
             // Gets pid of process
             pid_t pid = atoi(ep -> d_name);
             
-            if (pid <= 0){
+            if (pid <= 0 || !is_my_process(pid)){
                 continue;
             }
 
